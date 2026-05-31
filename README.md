@@ -1,10 +1,12 @@
+<p align="center">
+  <img src="docs/logo.png" alt="Glinx Logo" width="220" />
+</p>
+
 # Glinx
 
 **The Universal Hardware to Agent Middleware**
 
 MCP-connected tools to LLMs. Glinx connects reality to LLMs.
-
-**Logo:** [View Glinx Logo](https://ibb.co/WNzQ9JWG)
 
 ## Overview
 
