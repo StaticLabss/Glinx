@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "glinx"
+version = "0.1.0"
+description = "Universal hardware-to-agent middleware for MCP-compatible LLM systems."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Glinx Contributors" }
+]
+dependencies = [
+  "pydantic>=2.8,<3.0",
+  "PyYAML>=6.0,<7.0",
+  "typer>=0.12,<1.0",
+]
+
+[project.optional-dependencies]
+mcp = [
+  "mcp>=1.10.0,<2.0",
+]
+dev = [
+  "pytest>=8.2,<9.0",
+]
+
+[project.scripts]
+glinx = "glinx.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/glinx"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

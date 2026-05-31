@@ -1,0 +1,62 @@
+glinx:
+  name: demo_robot
+  agent_bridge: mcp
+
+ingestion:
+  sources:
+    - id: base_imu
+      protocol: mock
+      payloads:
+        - ax: 0.1
+          ay: 0.2
+          az: 9.7
+          gx: 0.0
+          gy: 0.1
+          gz: 0.0
+        - ax: 0.3
+          ay: 0.2
+          az: 10.2
+          gx: 0.0
+          gy: 0.2
+          gz: 2.3
+    - id: left_fingertip
+      protocol: mock
+      payloads:
+        - p: 23.4
+          temp: 31.1
+        - p: 58.4
+          temp: 31.5
+
+sensors:
+  - id: base_imu
+    type: imu
+    location: robot.base
+    fields:
+      ax: accel_x
+      ay: accel_y
+      az: accel_z
+      gx: gyro_x
+      gy: gyro_y
+      gz: gyro_z
+  - id: left_fingertip
+    type: force_sensor
+    location: robot.hand.left.fingertip
+    unit: kPa
+    fields:
+      p: contact_pressure
+      temp: surface_temperature
+
+event_rules:
+  - sensor: base_imu
+    condition: abs(az) > 9.5 and gz > 2.0
+    priority: HIGH
+    label: unexpected_rotation
+  - sensor: left_fingertip
+    condition: contact_pressure_kPa > 50
+    priority: HIGH
+    label: grip_overload
+
+summary_windows:
+  - sensors: [base_imu, left_fingertip]
+    interval_seconds: 5
+    label: periodic_status
