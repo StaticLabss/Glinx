@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
+import sys
 
 import typer
 
@@ -54,6 +56,50 @@ def start(
     typer.echo(f"Loaded {len(runtime.snapshots)} source tools.")
     typer.echo(f"Polling interval: {interval_seconds}s")
     typer.echo("Use --serve-mcp to expose tools over MCP.")
+
+
+@app.command()
+def run(
+    module: str = typer.Argument(
+        ..., help="Python import path to a Glinx app instance, e.g. 'myapp:app'"
+    ),
+    transport: str = typer.Option("stdio", "--transport"),
+) -> None:
+    """Import a Glinx app from a Python module and start serving.
+
+    Similar to ``uvicorn main:app``.  The module path should be in
+    ``module:attribute`` format.  Example::
+
+        glinx run demo:app
+    """
+    if ":" not in module:
+        typer.echo("Error: module must be in 'module:attribute' format (e.g. 'demo:app')", err=True)
+        raise typer.Exit(1)
+
+    mod_path, attr_name = module.rsplit(":", 1)
+
+    # Allow importing from the current directory.
+    if "." not in sys.path:
+        sys.path.insert(0, ".")
+
+    try:
+        mod = importlib.import_module(mod_path)
+    except ModuleNotFoundError as exc:
+        typer.echo(f"Error: could not import module '{mod_path}': {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+    glinx_app = getattr(mod, attr_name, None)
+    if glinx_app is None:
+        typer.echo(f"Error: module '{mod_path}' has no attribute '{attr_name}'", err=True)
+        raise typer.Exit(1)
+
+    from .app import Glinx
+
+    if not isinstance(glinx_app, Glinx):
+        typer.echo(f"Error: '{mod_path}:{attr_name}' is not a Glinx instance", err=True)
+        raise typer.Exit(1)
+
+    glinx_app.serve(transport=transport)
 
 
 if __name__ == "__main__":

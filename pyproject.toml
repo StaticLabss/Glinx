@@ -19,11 +19,21 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mqtt = [
+  "aiomqtt>=2.5,<3.0",
+]
+serial = [
+  "pyserial-asyncio-fast>=0.14",
+]
 mcp = [
   "mcp>=1.10.0,<2.0",
 ]
 dev = [
   "pytest>=8.2,<9.0",
+  "pytest-asyncio>=0.25,<1.0",
+]
+all = [
+  "glinx[mqtt,serial,mcp]",
 ]
 
 [project.scripts]
@@ -35,3 +45,4 @@ packages = ["src/glinx"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+asyncio_mode = "auto"

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from typing import Any
 
 from .bridges.mcp import MCPBridge
 from .bus import MessageBus
 from .config import GlinxConfig, SourceConfig
 from .drivers import DriverRegistry, MockDriver
+from .drivers.base import BaseDriver
 from .events import EventFilter
 from .models import EventMessage, GlinxMessage, SourceSnapshot
 from .schema import SchemaEngine
@@ -14,18 +16,21 @@ from .semantic import SemanticTagger
 
 
 class GlinxRuntime:
-    def __init__(self, config: GlinxConfig) -> None:
+    def __init__(self, config: GlinxConfig, max_events: int = 1000) -> None:
         self.config = config
         self.bus = MessageBus()
         self.schema_engine = SchemaEngine()
         self.semantic_tagger = SemanticTagger()
         self.event_filter = EventFilter(config.event_rules, config.summary_windows)
-        self.events: list[EventMessage] = []
+        self.events: deque[EventMessage] = deque(maxlen=max_events)
         self.snapshots: dict[str, SourceSnapshot] = {}
         self.registry = DriverRegistry()
         self.registry.register("mock", MockDriver)
+        self._auto_register_drivers()
         self._sensor_map = config.sensor_map()
+        self._drivers: dict[str, BaseDriver] = {}
         self._init_snapshots()
+        self._init_drivers()
 
     @classmethod
     def from_path(cls, path: str) -> "GlinxRuntime":
@@ -42,8 +47,28 @@ class GlinxRuntime:
                 output_schema={"type": "object", "properties": {}},
             )
 
+    def _auto_register_drivers(self) -> None:
+        """Auto-register protocol drivers whose dependencies are installed."""
+        try:
+            from .drivers.mqtt import MQTTDriver
+
+            self.registry.register("mqtt", MQTTDriver)
+        except ImportError:
+            pass
+        try:
+            from .drivers.serial import SerialDriver
+
+            self.registry.register("serial", SerialDriver)
+        except ImportError:
+            pass
+
+    def _init_drivers(self) -> None:
+        """Instantiate drivers once and reuse across poll cycles."""
+        for source in self.config.ingestion.sources:
+            self._drivers[source.id] = self.registry.create(source)
+
     async def ingest_source(self, source: SourceConfig) -> list[GlinxMessage]:
-        driver = self.registry.create(source)
+        driver = self._drivers[source.id]
         messages = await driver.poll()
         processed: list[GlinxMessage] = []
         for message in messages:
@@ -76,7 +101,7 @@ class GlinxRuntime:
             await asyncio.sleep(interval_seconds)
 
     def build_mcp_bridge(self) -> MCPBridge:
-        return MCPBridge(self.snapshots, self.events)
+        return MCPBridge(self.snapshots, list(self.events))
 
     def tool_specs(self) -> list[dict[str, Any]]:
         return self.build_mcp_bridge().tool_specs()

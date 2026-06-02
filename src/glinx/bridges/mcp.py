@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from typing import Any
 
 from ..models import EventMessage, SourceSnapshot
@@ -8,7 +9,7 @@ from ..models import EventMessage, SourceSnapshot
 class MCPBridge:
     def __init__(self, snapshots: dict[str, SourceSnapshot], events: list[EventMessage]) -> None:
         self.snapshots = snapshots
-        self.events = events
+        self.events = list(events)
 
     def tool_specs(self) -> list[dict[str, Any]]:
         specs: list[dict[str, Any]] = []
@@ -80,12 +81,18 @@ class MCPBridge:
 
         server = FastMCP("glinx")
 
+        def _make_tool_handler(bridge: MCPBridge, tool_name: str):
+            """Create an isolated handler to avoid closure capture issues."""
+
+            def handler() -> Any:
+                return bridge.invoke(tool_name)
+
+            return handler
+
         for spec in self.tool_specs():
             name = spec["name"]
             description = spec["description"]
-
-            @server.tool(name=name, description=description)
-            def _tool(name: str = name) -> Any:
-                return self.invoke(name)
+            handler = _make_tool_handler(self, name)
+            server.tool(name=name, description=description)(handler)
 
         server.run(transport=transport)

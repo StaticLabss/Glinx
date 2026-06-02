@@ -11,8 +11,8 @@ class MessageBus:
     def __init__(self) -> None:
         self._subscribers: dict[str, list[asyncio.Queue[Any]]] = defaultdict(list)
 
-    def subscribe(self, topic: str) -> asyncio.Queue[Any]:
-        queue: asyncio.Queue[Any] = asyncio.Queue()
+    def subscribe(self, topic: str, maxsize: int = 1000) -> asyncio.Queue[Any]:
+        queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=maxsize)
         self._subscribers[topic].append(queue)
         return queue
 
