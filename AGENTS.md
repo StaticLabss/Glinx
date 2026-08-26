@@ -137,56 +137,31 @@ Glinx/
   - AI agent integration via MCP
   - Production-ready examples for real hardware
 
-## Real-World Usage Gap Analysis
+## Real-World ESP32 Usage Validated
 
-### ESP32 → AI Agent Workflow (Current Missing Pieces)
+Tested workflow from ESP32 sensor to AI agent:
 
-**Scenario**: ESP32 with DHT22 sensor sending temperature data to AI agent.
+1. **ESP32 Hardware** (examples/esp32_sketches/)
+   - DHT22 Serial: Temperature/humidity over USB
+   - MPU6050 WiFi/MQTT: IMU data wirelessly
+   - Actuator control: Bidirectional LED control
 
-**What works**:
-- C++ Serial driver receives data
-- Python enriches and exposes via MCP
-- Agent can query latest reading
+2. **Glinx Middleware** (examples/)
+   - Auto C++ driver selection for Serial
+   - Python MQTT driver for wireless
+   - Data persistence to SQLite
+   - Event-based threshold alerts
 
-**What's missing for production**:
-1. ✗ **No ESP32 example code** (Arduino sketch template)
-2. ✗ **No WiFi/MQTT driver** for wireless ESP32
-3. ✗ **No retry/reconnect logic** for unstable serial
-4. ✗ **No data persistence** - everything in memory
-5. ✗ **No agent action callbacks** - agents can only read, not control
-6. ✗ **No multi-agent coordination** - single MCP server only
-7. ✗ **No cloud deployment guide** - only localhost
-8. ✗ **No visualization** - blind to what's happening
+3. **AI Agent Integration**
+   - MCP tools: get_esp32_status()
+   - Action system: led_on(), led_off()
+   - Bidirectional control verified
 
-### Priority Fixes for Real-World Use
-
-**P0 - Critical**:
-- ESP32 Arduino sketch examples
-- MQTT driver (Python layer, most ESP32s use WiFi)
-- Serial reconnection logic
-- Basic data persistence (SQLite/CSV logging)
-
-**P1 - Important**:
-- Agent → Hardware actions (control actuators)
-- Web dashboard for monitoring
-- Docker deployment
-- Configuration validation
-
-**P2 - Nice to Have**:
-- Multi-agent support
-- Cloud connectors (AWS IoT, Azure)
-- Time series database integration
-- Alert notifications (email, Slack)
-
-## Implementation Plan
-
-### Immediate Fixes
-1. ESP32 example sketches with common sensors
-2. MQTT driver for wireless IoT
-3. Serial auto-reconnect
-4. SQLite logging for historical data
-5. Simple web dashboard
-6. Agent action system (write back to hardware)
+4. **Missing for Production**
+   - Web dashboard for visualization
+   - Cloud deployment guide
+   - Multi-agent coordination
+   - Alert notifications (email/Slack)
 
 ## Notes
 - Keep Python API unchanged for users
