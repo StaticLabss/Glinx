@@ -7,6 +7,7 @@ from typing import Any
 from .bridges.mcp import MCPBridge
 from .bus import MessageBus
 from .config import GlinxConfig, SourceConfig
+from .core import CppRuntimeBridge, has_cpp_core
 from .drivers import DriverRegistry, MockDriver
 from .drivers.base import BaseDriver
 from .events import EventFilter
@@ -29,8 +30,10 @@ class GlinxRuntime:
         self._auto_register_drivers()
         self._sensor_map = config.sensor_map()
         self._drivers: dict[str, BaseDriver] = {}
+        self._cpp_bridge: CppRuntimeBridge | None = None
         self._init_snapshots()
         self._init_drivers()
+        self._init_cpp_bridge()
 
     @classmethod
     def from_path(cls, path: str) -> "GlinxRuntime":
@@ -65,7 +68,35 @@ class GlinxRuntime:
     def _init_drivers(self) -> None:
         """Instantiate drivers once and reuse across poll cycles."""
         for source in self.config.ingestion.sources:
+            # Skip sources that will be handled by C++ core
+            if self._should_use_cpp(source):
+                continue
             self._drivers[source.id] = self.registry.create(source)
+
+    def _should_use_cpp(self, source: SourceConfig) -> bool:
+        """Check if source should use C++ driver."""
+        return has_cpp_core() and source.protocol in ("serial", "i2c", "spi")
+
+    def _init_cpp_bridge(self) -> None:
+        """Initialize C++ bridge if applicable."""
+        cpp_sources = [s for s in self.config.ingestion.sources if self._should_use_cpp(s)]
+        
+        if cpp_sources and has_cpp_core():
+            cpp_config = {
+                "sources": [
+                    {
+                        "id": s.id,
+                        "protocol": s.protocol,
+                        "options": s.options,
+                    }
+                    for s in cpp_sources
+                ]
+            }
+            self._cpp_bridge = CppRuntimeBridge(cpp_config)
+            
+            # Log which sources are using C++ core
+            for source in cpp_sources:
+                print(f"✓ Using C++ core for {source.id} ({source.protocol})")
 
     async def ingest_source(self, source: SourceConfig) -> list[GlinxMessage]:
         driver = self._drivers[source.id]
