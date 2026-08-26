@@ -14,8 +14,22 @@ NB_MODULE(_glinx_core, m) {
     // SensorMessage
     nb::class_<SensorMessage>(m, "SensorMessage")
         .def(nb::init<>())
-        .def_rw("source_id", &SensorMessage::source_id)
-        .def_rw("protocol", &SensorMessage::protocol)
+        .def_prop_rw("source_id",
+            [](const SensorMessage& self) {
+                return std::string(self.source_id);
+            },
+            [](SensorMessage& self, const std::string& value) {
+                std::memset(self.source_id, 0, sizeof(self.source_id));
+                std::strncpy(self.source_id, value.c_str(), sizeof(self.source_id) - 1);
+            })
+        .def_prop_rw("protocol",
+            [](const SensorMessage& self) {
+                return std::string(self.protocol);
+            },
+            [](SensorMessage& self, const std::string& value) {
+                std::memset(self.protocol, 0, sizeof(self.protocol));
+                std::strncpy(self.protocol, value.c_str(), sizeof(self.protocol) - 1);
+            })
         .def_rw("timestamp", &SensorMessage::timestamp)
         .def_rw("payload_size", &SensorMessage::payload_size)
         .def_prop_rw("payload",

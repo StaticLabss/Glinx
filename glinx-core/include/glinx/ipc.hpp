@@ -1,6 +1,7 @@
 #pragma once
 
 #include "buffer.hpp"
+#include "driver.hpp"
 #include <memory>
 #include <string>
 
