@@ -99,11 +99,43 @@ class GlinxRuntime:
                 print(f"✓ Using C++ core for {source.id} ({source.protocol})")
 
     async def ingest_source(self, source: SourceConfig) -> list[GlinxMessage]:
+        # Check if using C++ driver
+        if self._should_use_cpp(source):
+            return await self._ingest_from_cpp(source.id)
+        
+        # Use Python driver
         driver = self._drivers[source.id]
         messages = await driver.poll()
         processed: list[GlinxMessage] = []
         for message in messages:
             processed.append(await self.process_message(message))
+        return processed
+
+    async def _ingest_from_cpp(self, source_id: str) -> list[GlinxMessage]:
+        """Ingest messages from C++ core."""
+        if self._cpp_bridge is None:
+            return []
+        
+        cpp_messages = self._cpp_bridge.get_messages()
+        processed: list[GlinxMessage] = []
+        
+        for msg_dict in cpp_messages:
+            if msg_dict["source_id"] != source_id:
+                continue
+            
+            # Convert to GlinxMessage
+            message = GlinxMessage(
+                source_id=msg_dict["source_id"],
+                protocol=msg_dict["protocol"],
+                timestamp=msg_dict["timestamp"],
+                raw_payload=msg_dict["raw_payload"],
+                parsed=msg_dict["parsed"],
+                metadata=msg_dict["metadata"],
+                enriched=msg_dict["enriched"],
+            )
+            
+            processed.append(await self.process_message(message))
+        
         return processed
 
     async def process_message(self, message: GlinxMessage) -> GlinxMessage:
