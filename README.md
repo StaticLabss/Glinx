@@ -10,10 +10,7 @@ Glinx is a high-performance middleware framework that connects physical hardware
 
 > *Wire once. Think forever.*
 
-[![C++ Build](https://github.com/StaticLabss/Glinx/workflows/C++%20Core%20Build%20&%20Test/badge.svg)](https://github.com/StaticLabss/Glinx/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![C++20](https://img.shields.io/badge/C++-20-00599C.svg)](https://isocpp.org/)
+
 
 ## Why Glinx?
 
@@ -29,12 +26,6 @@ Glinx solves this with a **hybrid architecture**:
 - **Zero-copy IPC**: Shared memory between layers
 
 **Result**: 1000x faster than pure Python, while maintaining Python's simplicity for AI/LLM work.
-
-## 🎯 **Production Ready - All Phases Complete!**
-
-✅ **Phase 1**: C++ core with lock-free buffers  
-✅ **Phase 2**: Python integration and testing  
-✅ **Phase 3**: Advanced features (CAN, profiling, sync)
 
 ---
 
