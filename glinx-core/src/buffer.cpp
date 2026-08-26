@@ -2,10 +2,9 @@
 
 namespace glinx {
 
-SensorBuffer::SensorBuffer(size_t capacity)
+SensorBuffer::SensorBuffer(size_t capacity) 
     : buffer_(std::make_unique<RingBuffer<SensorMessage, 16384>>()) {
-    // Note: Template parameter is fixed at 16384, capacity arg ignored for now
-    // Can be made dynamic with readerwriterqueue if needed
+    // Note: capacity parameter ignored for now, using compile-time constant
 }
 
 bool SensorBuffer::push(const SensorMessage& msg) {
