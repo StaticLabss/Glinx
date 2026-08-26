@@ -137,17 +137,56 @@ Glinx/
   - AI agent integration via MCP
   - Production-ready examples for real hardware
 
-## Next Steps
-1. ✅ Set up C++ build system (CMake)
-2. ✅ Implement lock-free ring buffer
-3. ✅ Port serial driver to C++
-4. ✅ Create Python bindings
-5. ✅ Add I2C and SPI drivers
-6. ✅ Implement IPC layer
-7. ✅ Add benchmarks and tests
-8. 🔄 Integration testing with real hardware
-9. 🔜 CAN bus driver
-10. 🔜 Optimize for Raspberry Pi/Jetson deployment
+## Real-World Usage Gap Analysis
+
+### ESP32 → AI Agent Workflow (Current Missing Pieces)
+
+**Scenario**: ESP32 with DHT22 sensor sending temperature data to AI agent.
+
+**What works**:
+- C++ Serial driver receives data
+- Python enriches and exposes via MCP
+- Agent can query latest reading
+
+**What's missing for production**:
+1. ✗ **No ESP32 example code** (Arduino sketch template)
+2. ✗ **No WiFi/MQTT driver** for wireless ESP32
+3. ✗ **No retry/reconnect logic** for unstable serial
+4. ✗ **No data persistence** - everything in memory
+5. ✗ **No agent action callbacks** - agents can only read, not control
+6. ✗ **No multi-agent coordination** - single MCP server only
+7. ✗ **No cloud deployment guide** - only localhost
+8. ✗ **No visualization** - blind to what's happening
+
+### Priority Fixes for Real-World Use
+
+**P0 - Critical**:
+- ESP32 Arduino sketch examples
+- MQTT driver (Python layer, most ESP32s use WiFi)
+- Serial reconnection logic
+- Basic data persistence (SQLite/CSV logging)
+
+**P1 - Important**:
+- Agent → Hardware actions (control actuators)
+- Web dashboard for monitoring
+- Docker deployment
+- Configuration validation
+
+**P2 - Nice to Have**:
+- Multi-agent support
+- Cloud connectors (AWS IoT, Azure)
+- Time series database integration
+- Alert notifications (email, Slack)
+
+## Implementation Plan
+
+### Immediate Fixes
+1. ESP32 example sketches with common sensors
+2. MQTT driver for wireless IoT
+3. Serial auto-reconnect
+4. SQLite logging for historical data
+5. Simple web dashboard
+6. Agent action system (write back to hardware)
 
 ## Notes
 - Keep Python API unchanged for users

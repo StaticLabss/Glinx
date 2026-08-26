@@ -17,7 +17,7 @@ from .semantic import SemanticTagger
 
 
 class GlinxRuntime:
-    def __init__(self, config: GlinxConfig, max_events: int = 1000) -> None:
+    def __init__(self, config: GlinxConfig, max_events: int = 1000, enable_logging: bool = False) -> None:
         self.config = config
         self.bus = MessageBus()
         self.schema_engine = SchemaEngine()
@@ -31,9 +31,14 @@ class GlinxRuntime:
         self._sensor_map = config.sensor_map()
         self._drivers: dict[str, BaseDriver] = {}
         self._cpp_bridge: CppRuntimeBridge | None = None
+        self._data_logger: DataLogger | None = None
         self._init_snapshots()
         self._init_drivers()
         self._init_cpp_bridge()
+        
+        if enable_logging:
+            from .persistence import DataLogger
+            self._data_logger = DataLogger()
 
     @classmethod
     def from_path(cls, path: str) -> "GlinxRuntime":
@@ -145,9 +150,19 @@ class GlinxRuntime:
         snapshot = self.snapshots[message.source_id]
         snapshot.latest_message = message
         snapshot.output_schema = self.schema_engine.schema_for(message.source_id)
+        
+        # Log to database if enabled
+        if self._data_logger:
+            self._data_logger.log_message(message)
+        
         for event in self.event_filter.process(message):
             snapshot.latest_event = event
             self.events.append(event)
+            
+            # Log events to database
+            if self._data_logger:
+                self._data_logger.log_event(event)
+            
             await self.bus.publish("events", event)
         await self.bus.publish("messages", message)
         return message
