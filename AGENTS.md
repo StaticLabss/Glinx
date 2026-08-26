@@ -134,11 +134,16 @@ Glinx/
 - 🔄 Ready for integration testing
 
 ## Next Steps
-1. Set up C++ build system (CMake)
-2. Implement lock-free ring buffer
-3. Port serial driver to C++
-4. Create Python bindings
-5. Benchmark against pure Python
+1. ✅ Set up C++ build system (CMake)
+2. ✅ Implement lock-free ring buffer
+3. ✅ Port serial driver to C++
+4. ✅ Create Python bindings
+5. ✅ Add I2C and SPI drivers
+6. ✅ Implement IPC layer
+7. ✅ Add benchmarks and tests
+8. 🔄 Integration testing with real hardware
+9. 🔜 CAN bus driver
+10. 🔜 Optimize for Raspberry Pi/Jetson deployment
 
 ## Notes
 - Keep Python API unchanged for users
