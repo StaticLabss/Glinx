@@ -45,10 +45,13 @@ FetchContent_MakeAvailable(readerwriterqueue)
 # Core library sources
 set(CORE_SOURCES
     src/buffer.cpp
+    src/driver.cpp
     src/ipc.cpp
+    src/profiler.cpp
     src/drivers/serial.cpp
     src/drivers/i2c.cpp
     src/drivers/spi.cpp
+    src/drivers/can.cpp
 )
 
 # Core library (static)
