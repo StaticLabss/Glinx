@@ -35,6 +35,7 @@ from .config import (
 )
 from .models import EventMessage, Priority
 from .runtime import GlinxRuntime
+from .actions import ActionRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +89,7 @@ class Glinx:
         self._event_callbacks: dict[str, Callable[..., Any]] = {}
         self._runtime: GlinxRuntime | None = None
         self._transforms: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {}
+        self._actions = ActionRegistry()
 
     # ── Decorators ──────────────────────────────────────────────
 
@@ -202,6 +204,23 @@ class Glinx:
 
         def decorator(fn: Callable[[EventMessage], Any]) -> Callable[[EventMessage], Any]:
             self._event_callbacks[label] = fn
+            return fn
+
+        return decorator
+
+    def action(self, name: str) -> Callable[..., Any]:
+        """Register an action that agents can call to control hardware.
+
+        Example::
+
+            @app.action("turn_on_led")
+            def turn_on_led():
+                gpio.output(LED_PIN, HIGH)
+                return {"status": "LED on"}
+        """
+
+        def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+            self._actions.register(name, fn)
             return fn
 
         return decorator
