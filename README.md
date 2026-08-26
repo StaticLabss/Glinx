@@ -30,6 +30,12 @@ Glinx solves this with a **hybrid architecture**:
 
 **Result**: 1000x faster than pure Python, while maintaining Python's simplicity for AI/LLM work.
 
+## 🎯 **Production Ready - All Phases Complete!**
+
+✅ **Phase 1**: C++ core with lock-free buffers  
+✅ **Phase 2**: Python integration and testing  
+✅ **Phase 3**: Advanced features (CAN, profiling, sync)
+
 ---
 
 ## Quickstart
@@ -278,14 +284,16 @@ glinx start --config glinx.yaml --serve-mcp
 
 ## Supported Protocols
 
-| Protocol | Status | Install |
-|---|---|---|
+| Protocol | Status | Platform |
+|----------|--------|----------|
 | Mock (testing) | ✅ Built-in | `pip install glinx` |
 | MQTT | ✅ Implemented | `pip install glinx[mqtt]` |
-| Serial / UART | ✅ Implemented | `pip install glinx[serial]` |
+| Serial / UART | ✅ C++ Driver | `pip install glinx[serial]` |
+| I2C | ✅ C++ Driver | Linux (Raspberry Pi, etc.) |
+| SPI | ✅ C++ Driver | Linux (Raspberry Pi, etc.) |
+| CAN Bus | ✅ C++ Driver | Linux (SocketCAN) |
 | WebSocket | 🔜 Planned | — |
 | BLE | 🔜 Planned | — |
-| CAN bus | 🔜 Planned | — |
 | ROS2 | 🔜 Planned | — |
 | Camera (OpenCV) | 🔜 Planned | — |
 
