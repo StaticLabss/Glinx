@@ -33,6 +33,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
     GIT_TAG v1.13.0
 )
+set(SPDLOG_USE_STD_FORMAT ON CACHE BOOL "Use std::format in spdlog" FORCE)
 FetchContent_MakeAvailable(spdlog)
 
 # readerwriterqueue (lock-free queue)
