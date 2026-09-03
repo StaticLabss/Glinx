@@ -116,3 +116,44 @@ def test_cpp_driver_selection():
     # Check if C++ bridge was initialized
     assert runtime._should_use_cpp(config.ingestion.sources[0])
     assert runtime._cpp_bridge is not None
+
+
+@pytest.mark.asyncio
+async def test_native_batch_is_drained_once_for_multiple_sources(mock_config):
+    runtime = GlinxRuntime(mock_config)
+    runtime.config.ingestion.sources = [
+        SourceConfig(id="native_a", protocol="serial", options={}),
+        SourceConfig(id="native_b", protocol="i2c", options={}),
+    ]
+    runtime._init_snapshots()
+
+    class FakeCppBridge:
+        calls = 0
+
+        def get_messages(self):
+            self.calls += 1
+            return [
+                {
+                    "source_id": source_id,
+                    "protocol": protocol,
+                    "timestamp": 1.0,
+                    "raw_payload": b"{}",
+                    "parsed": {"value": value},
+                    "metadata": {"cpp_core": True},
+                    "enriched": {},
+                }
+                for source_id, protocol, value in (
+                    ("native_a", "serial", 1),
+                    ("native_b", "i2c", 2),
+                )
+            ]
+
+    fake = FakeCppBridge()
+    runtime._cpp_bridge = fake
+    runtime._should_use_cpp = lambda source: True  # type: ignore[method-assign]
+
+    results = await runtime.poll_once()
+
+    assert fake.calls == 1
+    assert results["native_a"][0].parsed == {"value": 1}
+    assert results["native_b"][0].parsed == {"value": 2}

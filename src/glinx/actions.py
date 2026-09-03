@@ -83,3 +83,18 @@ class ActionRegistry:
             })
         
         return actions
+
+    def get(self, name: str) -> Callable[..., Any]:
+        """Return a registered handler by name.
+
+        The bridge uses the original callable so MCP can preserve its typed
+        signature when generating an input schema.
+        """
+        try:
+            return self._actions[name]
+        except KeyError as exc:
+            raise KeyError(f"Unknown action: {name}") from exc
+
+    def names(self) -> list[str]:
+        """Return action names in registration order."""
+        return list(self._actions)

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
-from typing import Any
+import inspect
+from typing import Any, Callable
 
+from .actions import ActionRegistry
 from .bridges.mcp import MCPBridge
 from .bus import MessageBus
 from .config import GlinxConfig, SourceConfig
@@ -17,7 +19,14 @@ from .semantic import SemanticTagger
 
 
 class GlinxRuntime:
-    def __init__(self, config: GlinxConfig, max_events: int = 1000, enable_logging: bool = False) -> None:
+    def __init__(
+        self,
+        config: GlinxConfig,
+        max_events: int = 1000,
+        enable_logging: bool = False,
+        transforms: dict[str, Callable[[dict[str, Any]], Any]] | None = None,
+        actions: ActionRegistry | None = None,
+    ) -> None:
         self.config = config
         self.bus = MessageBus()
         self.schema_engine = SchemaEngine()
@@ -30,6 +39,9 @@ class GlinxRuntime:
         self._auto_register_drivers()
         self._sensor_map = config.sensor_map()
         self._drivers: dict[str, BaseDriver] = {}
+        self._transforms = transforms or {}
+        self.actions = actions or ActionRegistry()
+        self._poll_lock = asyncio.Lock()
         self._cpp_bridge: CppRuntimeBridge | None = None
         self._data_logger: DataLogger | None = None
         self._init_snapshots()
@@ -145,8 +157,22 @@ class GlinxRuntime:
 
     async def process_message(self, message: GlinxMessage) -> GlinxMessage:
         sensor = self._sensor_map.get(message.source_id)
-        self.schema_engine.observe(message.source_id, message.parsed)
+        transform = self._transforms.get(message.source_id)
+        if transform is not None:
+            transformed = transform(dict(message.parsed))
+            if inspect.isawaitable(transformed):
+                transformed = await transformed
+            if not isinstance(transformed, dict):
+                raise TypeError(
+                    f"Sensor transform '{message.source_id}' must return a dict, "
+                    f"got {type(transformed).__name__}"
+                )
+            message.parsed = transformed
+
         message.enriched = self.semantic_tagger.enrich(sensor, message.parsed)
+        # MCP returns the enriched representation, so its advertised output
+        # schema must describe that representation rather than the wire data.
+        self.schema_engine.observe(message.source_id, message.enriched)
         snapshot = self.snapshots[message.source_id]
         snapshot.latest_message = message
         snapshot.output_schema = self.schema_engine.schema_for(message.source_id)
@@ -168,10 +194,27 @@ class GlinxRuntime:
         return message
 
     async def poll_once(self) -> dict[str, list[GlinxMessage]]:
-        results: dict[str, list[GlinxMessage]] = {}
-        for source in self.config.ingestion.sources:
-            results[source.id] = await self.ingest_source(source)
-        return results
+        async with self._poll_lock:
+            results: dict[str, list[GlinxMessage]] = {}
+
+            # A C++ buffer drain returns messages for every native source. Drain
+            # it once, group the batch, and avoid losing other sources while
+            # processing the first one.
+            cpp_batch: dict[str, list[dict[str, Any]]] = {}
+            if self._cpp_bridge is not None:
+                for message in self._cpp_bridge.get_messages():
+                    cpp_batch.setdefault(message["source_id"], []).append(message)
+
+            for source in self.config.ingestion.sources:
+                if self._should_use_cpp(source):
+                    processed: list[GlinxMessage] = []
+                    for msg_dict in cpp_batch.get(source.id, []):
+                        message = GlinxMessage(**msg_dict)
+                        processed.append(await self.process_message(message))
+                    results[source.id] = processed
+                else:
+                    results[source.id] = await self.ingest_source(source)
+            return results
 
     async def poll_forever(self, interval_seconds: float = 1.0) -> None:
         while True:
@@ -179,7 +222,12 @@ class GlinxRuntime:
             await asyncio.sleep(interval_seconds)
 
     def build_mcp_bridge(self) -> MCPBridge:
-        return MCPBridge(self.snapshots, list(self.events))
+        return MCPBridge(
+            self.snapshots,
+            self.events,
+            actions=self.actions,
+            poll=self.poll_once,
+        )
 
     def tool_specs(self) -> list[dict[str, Any]]:
         return self.build_mcp_bridge().tool_specs()

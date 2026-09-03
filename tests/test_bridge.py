@@ -2,6 +2,7 @@
 
 import pytest
 
+from glinx.actions import ActionRegistry
 from glinx.bridges.mcp import MCPBridge
 from glinx.models import EventMessage, GlinxMessage, SourceSnapshot
 
@@ -78,9 +79,45 @@ def test_invoke_drain_events() -> None:
     assert drained[0]["label"] == "a"
     # Events should be cleared after drain.
     assert bridge.invoke("drain_glinx_events") == []
+    assert events == []
 
 
 def test_invoke_unknown_tool_raises() -> None:
     bridge = MCPBridge({}, [])
     with pytest.raises(KeyError, match="Unknown tool"):
         bridge.invoke("nonexistent_tool")
+
+
+@pytest.mark.asyncio
+async def test_live_invoke_polls_before_reading_snapshot() -> None:
+    snapshots = {"s1": _make_snapshot("s1", with_message=False)}
+
+    async def poll() -> None:
+        snapshots["s1"].latest_message = _make_snapshot("s1").latest_message
+
+    bridge = MCPBridge(snapshots, [], poll=poll)
+
+    result = await bridge.invoke_async("get_s1_status")
+
+    assert result["status"] == "ok"
+    assert result["data"]["value"] == 42
+
+
+@pytest.mark.asyncio
+async def test_registered_action_becomes_typed_mcp_tool() -> None:
+    actions = ActionRegistry()
+
+    def set_speed(rpm: int, ramp: bool = True) -> dict[str, object]:
+        """Set the motor speed."""
+        return {"rpm": rpm, "ramp": ramp}
+
+    actions.register("set_speed", set_speed)
+    bridge = MCPBridge({}, [], actions=actions)
+
+    spec = next(item for item in bridge.tool_specs() if item["name"] == "set_speed")
+    result = await bridge.invoke_async("set_speed", rpm=1200)
+
+    assert spec["description"] == "Set the motor speed."
+    assert spec["inputSchema"]["properties"]["rpm"] == {"type": "integer"}
+    assert spec["inputSchema"]["required"] == ["rpm"]
+    assert result == {"status": "success", "result": {"rpm": 1200, "ramp": True}}

@@ -109,6 +109,21 @@ def test_poll_once_with_mock() -> None:
     assert results["s1"][0].parsed == {"x": 42}
 
 
+def test_sensor_transform_is_applied_to_agent_data() -> None:
+    app = Glinx()
+
+    @app.sensor("room", protocol="mock", payloads=[{"t": 22.5}])
+    def room(raw):
+        return {"temperature_c": raw["t"]}
+
+    message = app.poll_once()["room"][0]
+
+    assert message.parsed == {"temperature_c": 22.5}
+    assert message.enriched == {"temperature_c": 22.5}
+    assert app._runtime is not None
+    assert "temperature_c" in app._runtime.snapshots["room"].output_schema["properties"]
+
+
 def test_repr() -> None:
     app = Glinx(name="demo")
 

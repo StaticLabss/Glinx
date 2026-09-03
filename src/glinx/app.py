@@ -266,19 +266,23 @@ class Glinx:
         """Build and cache the runtime."""
         if self._runtime is None:
             config = self._build_config()
-            self._runtime = GlinxRuntime(config)
+            self._runtime = GlinxRuntime(
+                config,
+                transforms=self._transforms,
+                actions=self._actions,
+            )
         return self._runtime
 
     # ── Lifecycle ───────────────────────────────────────────────
 
     def serve(self, transport: str = "stdio") -> None:
-        """Build the runtime, run one poll cycle, and start the MCP server.
+        """Build the runtime and start the MCP server.
 
-        This is the main entry point for exposing sensors as MCP tools.
+        Sensor tools poll the runtime on demand so every agent call observes
+        current hardware state using the server's persistent event loop.
         """
         self._apply_windows_event_loop_policy()
         runtime = self._build_runtime()
-        asyncio.run(runtime.poll_once())
         runtime.build_mcp_bridge().serve(transport=transport)
 
     def run(self, *, interval: float = 1.0) -> None:
