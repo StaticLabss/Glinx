@@ -35,12 +35,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(json)
 
 # spdlog
+# NOTE: SPDLOG_USE_STD_FORMAT is intentionally left OFF. spdlog's bundled
+# fmt formatter is fully header-only and portable, whereas libc++'s
+# std::format floating-point support only became available at runtime on
+# macOS 13.3+, which broke wheels built with an older deployment target.
 FetchContent_Declare(
     spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.13.0
+    GIT_TAG v1.15.3
 )
-set(SPDLOG_USE_STD_FORMAT ON CACHE BOOL "Use std::format in spdlog" FORCE)
+set(SPDLOG_USE_STD_FORMAT OFF CACHE BOOL "Use std::format in spdlog" FORCE)
+set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "Use external fmt library" FORCE)
 FetchContent_MakeAvailable(spdlog)
 
 # Core library sources
@@ -71,6 +76,17 @@ if(WIN32)
     target_link_libraries(glinx_core PUBLIC setupapi)
 elseif(UNIX)
     target_link_libraries(glinx_core PUBLIC pthread)
+    if(NOT APPLE)
+        # POSIX shm_open/shm_unlink live in librt on glibc (including the
+        # manylinux images used for wheel builds). Without this, the
+        # extension fails to import at runtime with an undefined symbol
+        # error once loaded outside of a build tree that happens to have
+        # librt already pulled in transitively.
+        find_library(GLINX_RT_LIBRARY rt)
+        if(GLINX_RT_LIBRARY)
+            target_link_libraries(glinx_core PUBLIC ${GLINX_RT_LIBRARY})
+        endif()
+    endif()
 endif()
 
 # Python bindings (optional, built separately with nanobind)

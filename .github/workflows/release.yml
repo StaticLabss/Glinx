@@ -24,6 +24,15 @@ jobs:
           - ubuntu-24.04-arm
           - macos-14
           - windows-latest
+        include:
+          - os: ubuntu-latest
+            cibw_archs: "x86_64"
+          - os: ubuntu-24.04-arm
+            cibw_archs: "aarch64"
+          - os: macos-14
+            cibw_archs: "arm64"
+          - os: windows-latest
+            cibw_archs: "AMD64"
 
     steps:
       - uses: actions/checkout@v4
@@ -32,9 +41,11 @@ jobs:
         env:
           CIBW_BUILD: "cp311-* cp312-* cp313-*"
           CIBW_SKIP: "*-musllinux_*"
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_TEST_REQUIRES: "pydantic>=2.8,<3 PyYAML>=6,<7 typer>=0.12,<1"
           CIBW_TEST_COMMAND: >-
-            python -c "from glinx.core import benchmark_cpp_core, has_cpp_core;
+            python -c "import glinx._glinx_core;
+            from glinx.core import benchmark_cpp_core, has_cpp_core;
             assert has_cpp_core();
             result = benchmark_cpp_core(10000);
             assert result['messages_drained'] == 10000"
