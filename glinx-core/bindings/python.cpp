@@ -20,7 +20,8 @@ NB_MODULE(_glinx_core, m) {
             },
             [](SensorMessage& self, const std::string& value) {
                 std::memset(self.source_id, 0, sizeof(self.source_id));
-                std::strncpy(self.source_id, value.c_str(), sizeof(self.source_id) - 1);
+                const size_t size = (std::min)(value.size(), sizeof(self.source_id) - 1);
+                std::memcpy(self.source_id, value.data(), size);
             })
         .def_prop_rw("protocol",
             [](const SensorMessage& self) {
@@ -28,7 +29,8 @@ NB_MODULE(_glinx_core, m) {
             },
             [](SensorMessage& self, const std::string& value) {
                 std::memset(self.protocol, 0, sizeof(self.protocol));
-                std::strncpy(self.protocol, value.c_str(), sizeof(self.protocol) - 1);
+                const size_t size = (std::min)(value.size(), sizeof(self.protocol) - 1);
+                std::memcpy(self.protocol, value.data(), size);
             })
         .def_rw("timestamp", &SensorMessage::timestamp)
         .def_rw("payload_size", &SensorMessage::payload_size)

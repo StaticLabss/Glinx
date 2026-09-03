@@ -3,7 +3,7 @@
 #include <thread>
 #include <chrono>
 
-#ifndef _WIN32
+#ifdef __linux__
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -28,10 +28,7 @@ SPIDriver::~SPIDriver() {
 }
 
 bool SPIDriver::open_bus() {
-#ifdef _WIN32
-    spdlog::error("SPI driver not supported on Windows");
-    return false;
-#else
+#ifdef __linux__
     fd_ = ::open(bus_.c_str(), O_RDWR);
     
     if (fd_ < 0) {
@@ -62,11 +59,14 @@ bool SPIDriver::open_bus() {
     
     spdlog::info("Opened SPI bus {} @ {} Hz", bus_, speed_hz_);
     return true;
+#else
+    spdlog::error("SPI driver is only supported on Linux");
+    return false;
 #endif
 }
 
 void SPIDriver::close_bus() {
-#ifndef _WIN32
+#ifdef __linux__
     if (fd_ >= 0) {
         ::close(fd_);
         fd_ = -1;
@@ -75,9 +75,7 @@ void SPIDriver::close_bus() {
 }
 
 bool SPIDriver::transfer(const uint8_t* tx_data, uint8_t* rx_data, size_t len) {
-#ifdef _WIN32
-    return false;
-#else
+#ifdef __linux__
     struct spi_ioc_transfer tr = {};
     tr.tx_buf = reinterpret_cast<unsigned long>(tx_data);
     tr.rx_buf = reinterpret_cast<unsigned long>(rx_data);
@@ -92,6 +90,11 @@ bool SPIDriver::transfer(const uint8_t* tx_data, uint8_t* rx_data, size_t len) {
     
     transfers_.fetch_add(1);
     return true;
+#else
+    (void)tx_data;
+    (void)rx_data;
+    (void)len;
+    return false;
 #endif
 }
 

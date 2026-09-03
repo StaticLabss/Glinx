@@ -7,16 +7,22 @@ and Python's high-level AI/LLM layer.
 from __future__ import annotations
 
 import json
-import time
 from typing import Any
 
 try:
-    import _glinx_core  # type: ignore[import-not-found]
+    from . import _glinx_core  # type: ignore[attr-defined]
 
     HAS_CPP_CORE = True
 except ImportError:
-    HAS_CPP_CORE = False
-    _glinx_core = None
+    # Keep compatibility with developer builds created by the legacy scripts,
+    # which placed the extension at the top level instead of in ``glinx``.
+    try:
+        import _glinx_core  # type: ignore[import-not-found,no-redef]
+
+        HAS_CPP_CORE = True
+    except ImportError:
+        HAS_CPP_CORE = False
+        _glinx_core = None  # type: ignore[assignment]
 
 
 class CppRuntimeBridge:

@@ -3,7 +3,7 @@
 #include <thread>
 #include <chrono>
 
-#ifndef _WIN32
+#ifdef __linux__
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -32,10 +32,7 @@ CANDriver::~CANDriver() {
 }
 
 bool CANDriver::open_can() {
-#ifdef _WIN32
-    spdlog::error("CAN driver not supported on Windows");
-    return false;
-#else
+#ifdef __linux__
     // Create socket
     socket_fd_ = socket(PF_CAN, SOCK_RAW, CAN_RAW);
     if (socket_fd_ < 0) {
@@ -77,11 +74,14 @@ bool CANDriver::open_can() {
     
     spdlog::info("Opened CAN interface {} @ {} bps", interface_, bitrate_);
     return true;
+#else
+    spdlog::error("CAN driver is only supported on Linux");
+    return false;
 #endif
 }
 
 void CANDriver::close_can() {
-#ifndef _WIN32
+#ifdef __linux__
     if (socket_fd_ >= 0) {
         ::close(socket_fd_);
         socket_fd_ = -1;
@@ -90,9 +90,7 @@ void CANDriver::close_can() {
 }
 
 bool CANDriver::set_filters() {
-#ifdef _WIN32
-    return false;
-#else
+#ifdef __linux__
     if (filter_ids_.empty()) {
         return true;  // No filters = accept all
     }
@@ -112,6 +110,8 @@ bool CANDriver::set_filters() {
     
     spdlog::info("Set {} CAN filters", filters.size());
     return true;
+#else
+    return false;
 #endif
 }
 
@@ -189,7 +189,7 @@ void CANDriver::poll_loop() {
         return;
     }
     
-#ifndef _WIN32
+#ifdef __linux__
     struct can_frame frame;
     
     while (!stop_requested()) {

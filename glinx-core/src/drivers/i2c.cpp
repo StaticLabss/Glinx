@@ -3,7 +3,7 @@
 #include <thread>
 #include <chrono>
 
-#ifndef _WIN32
+#ifdef __linux__
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -28,10 +28,7 @@ I2CDriver::~I2CDriver() {
 }
 
 bool I2CDriver::open_bus() {
-#ifdef _WIN32
-    spdlog::error("I2C driver not supported on Windows");
-    return false;
-#else
+#ifdef __linux__
     fd_ = ::open(bus_.c_str(), O_RDWR);
     
     if (fd_ < 0) {
@@ -48,11 +45,14 @@ bool I2CDriver::open_bus() {
     
     spdlog::info("Opened I2C bus {} with device 0x{:02X}", bus_, device_address_);
     return true;
+#else
+    spdlog::error("I2C driver is only supported on Linux");
+    return false;
 #endif
 }
 
 void I2CDriver::close_bus() {
-#ifndef _WIN32
+#ifdef __linux__
     if (fd_ >= 0) {
         ::close(fd_);
         fd_ = -1;
@@ -61,9 +61,7 @@ void I2CDriver::close_bus() {
 }
 
 bool I2CDriver::read_register(uint8_t reg, uint8_t* data, size_t len) {
-#ifdef _WIN32
-    return false;
-#else
+#ifdef __linux__
     if (::write(fd_, &reg, 1) != 1) {
         i2c_errors_.fetch_add(1);
         return false;
@@ -76,6 +74,11 @@ bool I2CDriver::read_register(uint8_t reg, uint8_t* data, size_t len) {
     
     reads_.fetch_add(1);
     return true;
+#else
+    (void)reg;
+    (void)data;
+    (void)len;
+    return false;
 #endif
 }
 

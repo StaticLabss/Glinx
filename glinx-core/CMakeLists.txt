@@ -10,8 +10,14 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(MSVC)
     add_compile_options(/W4 /O2 /GL)
     add_link_options(/LTCG)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
 else()
-    add_compile_options(-Wall -Wextra -O3 -march=native -flto)
+    add_compile_options(-Wall -Wextra -O3 -flto)
+    # Native CPU instructions are useful for local benchmarks but make
+    # binary wheels unsafe to distribute to other machines.
+    if(NOT SKBUILD)
+        add_compile_options(-march=native)
+    endif()
 endif()
 
 # Include directories
@@ -24,6 +30,7 @@ include(FetchContent)
 FetchContent_Declare(
     json
     URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(json)
 
@@ -35,14 +42,6 @@ FetchContent_Declare(
 )
 set(SPDLOG_USE_STD_FORMAT ON CACHE BOOL "Use std::format in spdlog" FORCE)
 FetchContent_MakeAvailable(spdlog)
-
-# readerwriterqueue (lock-free queue)
-FetchContent_Declare(
-    readerwriterqueue
-    GIT_REPOSITORY https://github.com/cameron314/readerwriterqueue.git
-    GIT_TAG master
-)
-FetchContent_MakeAvailable(readerwriterqueue)
 
 # Core library sources
 set(CORE_SOURCES
@@ -58,9 +57,9 @@ set(CORE_SOURCES
 
 # Core library (static)
 add_library(glinx_core STATIC ${CORE_SOURCES})
+set_target_properties(glinx_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(glinx_core PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${readerwriterqueue_SOURCE_DIR}
 )
 target_link_libraries(glinx_core PUBLIC 
     nlohmann_json::nlohmann_json
@@ -77,7 +76,7 @@ endif()
 # Python bindings (optional, built separately with nanobind)
 option(BUILD_PYTHON_BINDINGS "Build Python bindings with nanobind" ON)
 if(BUILD_PYTHON_BINDINGS)
-    find_package(Python 3.11 COMPONENTS Interpreter Development REQUIRED)
+    find_package(Python 3.11 COMPONENTS Interpreter Development.Module REQUIRED)
     
     # Nanobind
     FetchContent_Declare(
@@ -89,6 +88,10 @@ if(BUILD_PYTHON_BINDINGS)
     
     nanobind_add_module(_glinx_core bindings/python.cpp)
     target_link_libraries(_glinx_core PRIVATE glinx_core)
+    install(TARGETS _glinx_core
+        LIBRARY DESTINATION glinx
+        RUNTIME DESTINATION glinx
+    )
 endif()
 
 # Testing
@@ -105,8 +108,10 @@ if(BUILD_BENCHMARKS)
 endif()
 
 # Installation
-install(TARGETS glinx_core
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-)
-install(DIRECTORY include/ DESTINATION include)
+if(NOT SKBUILD)
+    install(TARGETS glinx_core
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+    )
+    install(DIRECTORY include/ DESTINATION include)
+endif()
