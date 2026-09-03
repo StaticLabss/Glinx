@@ -102,8 +102,12 @@ bool SerialDriver::open_port() {
         case 57600: baud = B57600; break;
         case 115200: baud = B115200; break;
         case 230400: baud = B230400; break;
+#ifdef B460800
         case 460800: baud = B460800; break;
+#endif
+#ifdef B921600
         case 921600: baud = B921600; break;
+#endif
         default:
             spdlog::warn("Unsupported baud rate {}, using 115200", baudrate_);
             baud = B115200;
