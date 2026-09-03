@@ -34,6 +34,11 @@ dependencies = [
   "typer>=0.12,<1.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/StaticLabss/Glinx"
+Repository = "https://github.com/StaticLabss/Glinx.git"
+Issues = "https://github.com/StaticLabss/Glinx/issues"
+
 [project.optional-dependencies]
 mqtt = [
   "aiomqtt>=2.5,<3.0",
